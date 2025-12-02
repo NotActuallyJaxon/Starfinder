@@ -3,7 +3,7 @@ from starfinder_visuals import (
     color_input, bluestyle, bold, greenstyle, redstyle,
     stylereset, yellowstyle
 )
-# Decided to put this in a different program file due to its size
+# Decided to put this in a different program file due to its size and specific purpose
 from starfinder_find import find
 
 
@@ -11,6 +11,7 @@ def load_star_data(config):
     """ Prompt for a new data location and its label """
     label = color_input("Enter the label for this star data set: ", color=yellowstyle).strip()
     path = color_input("Enter the path to the star data JSON file: ", color=yellowstyle).strip().strip('"\'')
+    # Add the path pointers to the config object and file to maintain parity
     config.data_paths[label] = path
     config.update_region_data(label, path)
     config.update_config()
@@ -25,7 +26,10 @@ def show_data(config):
 
     for region, systems in config.region_data.items():
         num_systems = len(systems)
-        num_planets = sum(systems[system_id]["planet_count"] for system_id in systems)
+        num_planets = sum(
+            systems[system_id]["planet_count"]
+            for system_id in systems
+        )
         num_moons = sum(
             planet["moons"]
             for system_id in systems
@@ -52,6 +56,7 @@ def end_program(config):
     return True
 
 
+# Setting up the command dictionary
 prompt_dict = {
     "1": find,
     "2": load_star_data,

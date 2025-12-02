@@ -46,7 +46,7 @@ def view_parameters(parameters):
     curr = parameters.first
     before_focus = True
     # Goes node by node starting at the first
-    # Colors them green if they are not undone
+    # Colors them green if they are not undone (before or is focus)
     while curr:
         text = f"[{curr.data[0]}: {curr.data[1]}]" + ("," if curr.next else "")
 
@@ -73,24 +73,27 @@ def planet_prompt():
                 + "\nType here: "
                 , color = yellowstyle
                 ).strip().lower().capitalize()
-    
+
     return choice
 
 
 def planet_step(config, planet_parameters):    
-    end = False
-    while not end:
+    exit_planet_step = False
+    # Continue printing out the planet parameter options and other information until user chooses to exit
+    while not exit_planet_step:
         planet_options()
         print("\n[Current planet parameters]\n==========================")
         view_parameters(planet_parameters)
         print("==========================")
         print("Num found: " + violetstyle + str(len(search(config, planet_parameters))) + stylereset + "\n")
         choice = planet_prompt()
-        end = choice_action(choice, planet_parameters)
+        exit_planet_step, exit_search = choice_action(choice, planet_parameters)
+    return exit_search
 
 
 def planet_add_parameter(parameters, choice):
     """ adds the choice to a linked list called parameters here"""
+    # The choice is verified before this
     if choice in tectonics:
         parameters.append(("tectonics", choice.split("_", 1)[0]))
     elif choice in atmosphere:
@@ -99,29 +102,29 @@ def planet_add_parameter(parameters, choice):
         parameters.append(("oceans", choice.split("_", 1)[0]))
     elif choice in life_status:
         parameters.append(("life_status", choice == "Life"))
-        
+
 
 def choice_action(choice, parameters):
     """ takes an action based on the choice made """
     clear_console()
     if choice == "Done":
         parameters.solidify()
-        return True
+        return True, False
     if choice == "Exit":
-        print(greenstyle + "Exiting to main menu\n" + stylereset)
-        return True
+        print(greenstyle + "Exiting to main menu" + stylereset)
+        return True, True
     if choice == "Undo":
         parameters.prev()
-        return False
+        return False, False
     if choice == "Redo":
         parameters.next()
-        return False
+        return False, False
     if choice in planet_characteristics:
         planet_add_parameter(parameters, choice)
-        return False
+        return False, False
 
     print(redstyle + "Invalid choice\n" + stylereset)
-    return False
+    return False, False
 
 
 class Node:
@@ -212,7 +215,8 @@ def search(config, planet_parameters):
         for system_key, system in systems.items():
             for planet in system.get("planets", []):
                 if ok(planet):
-                    id_list.append(f"{system.get('id')}-{planet.get('id')}")
+                    id_list.append((f"{system.get('id')}-{planet.get('id')}", planet["name"]))
+
     return id_list
 
 
@@ -220,10 +224,26 @@ def find(config):
     # Initializes the linked list for storying choice history
     planet_parameters = LinkedList()
     # Prompts for characterics until user enters 'done' then moves on from there
-    planet_step(config, planet_parameters)
+    exit = planet_step(config, planet_parameters)
+    if exit:
+        return
+    
     print("[Search Results]\n==========================")
     id_list = search(config, planet_parameters)
+
+    # For sorting the names just because
+    def insertion_sort(ids):
+        for i in range(1, len(ids)):
+            key = ids[i]
+            j = i - 1
+            while j >= 0 and ids[j][1] > key[1]:
+                ids[j + 1] = ids[j]
+                j -= 1
+            ids[j + 1] = key
+
+    insertion_sort(id_list)
+
     if len(id_list) == 0:
         print(redstyle + "None found" + stylereset)
     for id in id_list:
-        print(violetstyle + f"{id}" + stylereset)
+        print(violetstyle + f"{id[0]:<6} : {id[1]}" + stylereset)
